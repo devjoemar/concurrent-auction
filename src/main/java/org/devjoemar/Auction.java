@@ -43,6 +43,8 @@ public class Auction {
     private final TreeMap<Double, Bid> bids;
     private final ReentrantLock lock;
 
+    private boolean isClosed = false;
+
     /**
      * Constructs an Auction instance.
      * @param item The item being auctioned.
@@ -101,48 +103,57 @@ public class Auction {
     /**
      * Finalizes the auction and determines its result.
      * <p>
-     * This method is called when an auction reaches its closing time. It locks the auction instance
-     * to ensure exclusive access, then finalizes the auction by determining the winning bid based on
-     * auction rules. The highest bidder is identified, but the price paid is equal to the second
-     * highest bid. If there's only one valid bid, the winner pays the reserve price. In case there
-     * are no valid bids, the auction is marked as 'UNSOLD'.
+     * This method is invoked when an auction reaches its closing time or when a heartbeat action
+     * triggers the finalization of past-due auctions. It ensures that the auction is finalized only once,
+     * maintaining the integrity of the auction's outcome. The method employs a ReentrantLock to manage
+     * concurrent access, preventing inconsistencies and race conditions in a multi-threaded environment.
      * </p>
      * <p>
-     * A ReentrantLock is used to manage concurrent access to the auction's state. The lock is acquired
-     * at the beginning of the method and released in the finally block to ensure that it's always
-     * released, preventing potential deadlocks. This locking mechanism is essential for maintaining
-     * data integrity in a concurrent environment, where multiple threads might attempt to modify
-     * the auction's state simultaneously.
+     * The finalization process involves determining the winning bid based on auction rules: the highest
+     * bidder wins, but the price paid is equal to the second-highest bid. If only one valid bid is present,
+     * the winner pays the reserve price. If no valid bids meet the reserve price, the auction is marked as
+     * 'UNSOLD'. The TreeMap data structure, storing bids in descending order, facilitates efficient retrieval
+     * of the highest and second-highest bids.
      * </p>
      * <p>
-     * The TreeMap data structure is employed to store bids, facilitating the retrieval of the
-     * highest and second highest bids efficiently.
+     * The addition of the 'isClosed' boolean field ensures that once an auction is finalized, subsequent
+     * bids do not alter its outcome. This field is crucial in a concurrent setup where multiple threads may
+     * attempt to finalize or modify an auction simultaneously. By locking the auction during finalization and
+     * checking the 'isClosed' status, the method upholds the correctness and immutability of the finalized
+     * auction result.
+     * </p>
+     * <p>
+     * This method returns an AuctionResult object, encapsulating details like the item, auction closing time,
+     * winning user ID, auction status (SOLD/UNSOLD), price paid, total number of bids, highest bid, and lowest bid.
      * </p>
      *
      * @return AuctionResult representing the outcome of the auction. This includes details such as
-     *         the item, the closing time of the auction, the ID of the winning user, the auction status
-     *         (SOLD or UNSOLD), the price paid, the total number of valid bids, the highest bid, and
-     *         the lowest bid.
+     *         the item, closing time, winning user ID, auction status, price paid, total bid count,
+     *         highest bid, and lowest bid.
      */
     public AuctionResult finalizeAuction() {
         lock.lock();
         try {
-            if (bids.isEmpty()) {
+            if (isClosed) {
                 return new AuctionResult(item, closeTime, -1, "UNSOLD", 0.00, 0, 0.00, 0.00);
             }
 
-            int totalBidCount = bids.size();
-            double highestBid = bids.firstKey();
-            double lowestBid = bids.lastKey();
-            Map.Entry<Double, Bid> winnerEntry = bids.pollFirstEntry();
-            double pricePaid = reservePrice;
+            isClosed = true;
+            double highestBid = bids.isEmpty() ? 0.00 : bids.firstKey();
+            double lowestBid = bids.isEmpty() ? 0.00 : bids.lastKey();
 
-            if (bids.size() > 0) {
-                pricePaid = bids.firstKey(); // Price of the second highest bid
+            // If no valid bids are present or all bids are below the reserve price
+            if (bids.isEmpty() || highestBid < reservePrice) {
+                return new AuctionResult(item, closeTime, -1, "UNSOLD", 0.00, bids.size(), highestBid, lowestBid);
             }
 
+            // Calculate the winner and price paid
+            int totalBidCount = bids.size();
+            Map.Entry<Double, Bid> winnerEntry = bids.pollFirstEntry();
+            double pricePaid = bids.isEmpty() ? reservePrice : bids.firstKey();
+
             return new AuctionResult(item, closeTime, winnerEntry.getValue().getUserId(),
-                                     "SOLD", pricePaid, totalBidCount, highestBid, lowestBid);
+                    "SOLD", pricePaid, totalBidCount, highestBid, lowestBid);
         } finally {
             lock.unlock();
         }

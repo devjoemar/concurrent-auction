@@ -250,4 +250,69 @@ public class AuctionSystemTest {
         assertEquals(10, result.getTotalBidCount());
     }
 
+    /**
+     * Tests a complex auction scenario with multiple items and bids.
+     * <p>
+     * This test simulates two separate auctions, 'toaster_1' and 'tv_1', with varying bids and
+     * closing times. It validates the auction system's ability to correctly process these bids,
+     * handle auction closing times, and determine the final outcome of each auction.
+     * </p>
+     * <p>
+     * The test follows a sequence of inputs to simulate the auction environment:
+     * - 'toaster_1' receives bids both below and above its reserve price.
+     * - 'tv_1' receives bids only below its reserve price during the auction period.
+     * - A late bid is placed on 'tv_1' after its closing time.
+     * </p>
+     * <p>
+     * Assertions made in this test:
+     * - For 'toaster_1':
+     *   - Asserts the auction is 'SOLD'.
+     *   - Confirms the winning user and the price paid (second-highest bid).
+     *   - Validates the total number of bids, highest bid, and lowest bid.
+     * - For 'tv_1':
+     *   - Asserts the auction is 'UNSOLD' due to no bids meeting the reserve price.
+     *   - Confirms that no winning user is recorded.
+     *   - Validates that the late bid after closing time is not considered.
+     * </p>
+     * <p>
+     * This test case provides a comprehensive assessment of the auction system's core functionalities,
+     * including bid processing, auction finalization, and rule enforcement (such as handling bids
+     * post-auction closing and reserve price considerations).
+     * </p>
+     */
+    @Test
+    public void testAuctionScenario() {
+        // Process inputs for toaster_1 and tv_1 auctions
+        manager.processInput("10|1|SELL|toaster_1|10.00|20");
+        manager.processInput("12|8|BID|toaster_1|7.50");
+        manager.processInput("13|5|BID|toaster_1|12.50");
+        manager.processInput("15|8|SELL|tv_1|250.00|20");
+        manager.processInput("16");
+        manager.processInput("17|8|BID|toaster_1|20.00");
+        manager.processInput("18|1|BID|tv_1|150.00");
+        manager.processInput("19|3|BID|tv_1|200.00");
+        manager.processInput("20");
+        manager.processInput("21|3|BID|tv_1|300.00");
+
+        // Assert results for toaster_1
+        AuctionResult toasterResult = manager.getAuctionResult("toaster_1");
+        assertNotNull(toasterResult);
+        assertEquals("8", String.valueOf(toasterResult.getUserId()));
+        assertEquals("SOLD", toasterResult.getStatus());
+        assertEquals(12.50, toasterResult.getPricePaid(), 0.01);
+        assertEquals(3, toasterResult.getTotalBidCount());
+        assertEquals(20.00, toasterResult.getHighestBid(), 0.01);
+        assertEquals(7.50, toasterResult.getLowestBid(), 0.01);
+
+        // Assert results for tv_1
+        AuctionResult tvResult = manager.getAuctionResult("tv_1");
+        assertNotNull(tvResult);
+        assertEquals("-1", String.valueOf(tvResult.getUserId())); // No winning user
+        assertEquals("UNSOLD", tvResult.getStatus());
+        assertEquals(0.00, tvResult.getPricePaid(), 0.01);
+        assertEquals(2, tvResult.getTotalBidCount());
+        assertEquals(200.00, tvResult.getHighestBid(), 0.01);
+        assertEquals(150.00, tvResult.getLowestBid(), 0.01);
+    }
+
 }
