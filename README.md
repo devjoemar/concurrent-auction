@@ -1,4 +1,4 @@
-### Auction System Simulation
+#### Auction System Simulation
 
 #### Overview
 This repository contains a Java-based simulation of an auction system, designed to mimic real-world auction dynamics. It offers a robust platform for listing items for auction and placing bids, with a focus on handling complex scenarios including concurrent bidding.
@@ -6,7 +6,7 @@ This repository contains a Java-based simulation of an auction system, designed 
 #### Purpose of the Simulation
 The primary aim is to demonstrate effective handling of various auction scenarios, particularly focusing on concurrency and compliance with common auction rules.
 
-### Auction Rules
+#### Auction Rules
 The application adheres to these rules:
 - **Auction Time Frame**: Bids are valid if placed after the auction start time and before or on the closing time.
 - **Bid Validity**: A bid is valid if it is higher than previous bids made by the same user.
@@ -16,7 +16,7 @@ The application adheres to these rules:
    - In the event of equal bids, the earliest bid prevails.
 - **No Bids**: Without valid bids, the item remains unsold.
 
-### Implementation Details
+#### Implementation Details
 #### Data Structures and Algorithms
 - **ConcurrentHashMap**: Utilized for storing active auctions (`auctions`) and auction results (`auctionResults`) in the `AuctionManager` class, ensuring thread-safe operations.
 - **TreeMap**: Employed within each `Auction` instance to store bids in a reverse-sorted order for efficient highest and second-highest bid retrieval.
@@ -29,7 +29,7 @@ The application adheres to these rules:
 - **Concurrency Handling**: Demonstrates handling of concurrent bid submissions using `ExecutorService` in unit tests to simulate real-world auction scenarios.
 - **Thread Safety**: Ensures consistent and accurate auction processing in a multi-threaded environment.
 
-### Input and Output Formats
+#### Input and Output Formats
 #### Input
 Actions are represented as pipe-delimited strings:
 - SELL: `timestamp|user_id|SELL|item|reserve_price|close_time`
@@ -40,7 +40,7 @@ Actions are represented as pipe-delimited strings:
 Each completed auction outputs:
 - `close_time|item|user_id|status|price_paid|total_bid_count|highest_bid|lowest_bid`
 
-### Unit Test Cases
+#### Unit Test Cases
 The repository includes comprehensive tests for scenarios like:
 - Single Bid Wins and Pays Reserve Price
 - Highest Bidder Pays Second Highest Price
